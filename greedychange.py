@@ -112,5 +112,10 @@ for x in range(len(amounts)):
 	outfile.write("Amount: " + str(amounts[amountIndex]) + "\n") 
 	outfile.write("Change: " + str(change) + "\n\n")
 	
+	#Calculate minimum number of required coins
+	minimum = 0
+	for y in change: 
+		minimum += y
+	outfile.write("Minumum coins: " + str(minimum) + "\n\n")
 
 	amountIndex += 1
