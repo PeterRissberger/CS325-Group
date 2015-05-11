@@ -1,6 +1,6 @@
-#Peter Rissberger
-#5/5/15
-#ChangeGreedy
+#Alex C. Way
+#5/10/15
+#ChangeDP
 #CS 325
 
 import sys
@@ -43,27 +43,50 @@ def scanInput():
 	outfile.truncate(0)
 	outfile.close()
 
-def changegreedy(v, a):
+def changeDP(v, a):
 	global amountIndex
-	coins = v[amountIndex] #Set of coins used to reach target sum
-	target = a[amountIndex] #Target sum for coins 
-	change = [] #Array of count of each type of coin needed to rach target sum 
-	coinIndex = len(coins) - 1 #Used to iterate through coin values 
+	V = v[amountIndex] # coinValueList: Set of coins used to reach target sum
+	A = a[amountIndex] # change: Target sum for coins 
+	T = [] # coinsUsed: Table of minimum number of coins for v
+	C = [] # minCoins: Array of count of each type of coin needed to reach target sum 
+	
+	for i in range(A+1): #was for v in range(2, A):
+		coinCount = i
+		newCoin = V[0]
+		for j in [n for n in V if n <= i]:
+			if C[i-j] + 1 < coinCount:
+				coinCount = C[i-j] + 1
+				newCoin = j
+		C.insert(i, coinCount)
+		T.insert(i, newCoin)
+	#print "C[i] = ", C[i]
+	newC = convertChange(A, T, V)
+	return newC
 
-	#Outer loop: Cycle through every coin type 
-	while(coinIndex >= 0): 
-		coinCounter = 0 #Counts the number necessary of given coin type
-		print "   Top of coins while. coinCounter = " + str(coinCounter) + " coinIndex = " + str(coinIndex) + " target = " + str(target)
 
-		#Inner loop: Add as many of a given coin type as needed 
-		while(target >= coins[coinIndex]):
-			target -= coins[coinIndex]
-			coinCounter += 1	
-		
-		change.insert(0, coinCounter) #Add number of coin types to beginning of 'change'
-		coinIndex -= 1 #Cycle to next coin type
-
-	return change
+#takes the set of values found in changeDP() and extracts the answer
+def convertChange(A, T, V):
+	temp = []
+	i = 0
+	coin = A
+	coinIndex = []
+	while coin > 0:
+		#print "size of T:", len(T)
+		#print "coin = ", coin
+		thisCoin = T[coin]
+		#print "thisCoin = ", thisCoin
+		temp.insert(i, thisCoin)
+		coin = coin - thisCoin
+		#print "coin2 = ", coin
+		i = i + 1
+	for j in range(len(V)):
+		sum = 0
+		for t in range (len(temp)):
+			if temp[t] == V[j]:
+				sum = sum + 1
+		coinIndex.insert(j, sum)
+	print "returning ", coinIndex
+	return coinIndex
 
 
 #############
@@ -77,12 +100,12 @@ print "Amounts: "
 print amounts
 
 
-outfile = open('Amountchange.txt', 'w')
-outfile.write("ChangeGreedy Algorithm Resutls:\n")
+outfile = open('AmountchangeDP.txt', 'w')
+outfile.write("ChangeDP Algorithm Results:\n")
 
 #Run algorithm for all amounts
 for x in range(len(amounts)):
-	change = changegreedy(values, amounts)
+	change = changeDP(values, amounts)
 	
 	#File output
 	outfile.write("Results for problem " + str(amountIndex) + "\nCoins: " + str(values[amountIndex]) + "\n")
@@ -91,4 +114,3 @@ for x in range(len(amounts)):
 	
 
 	amountIndex += 1
-
