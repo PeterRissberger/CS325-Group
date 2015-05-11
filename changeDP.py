@@ -57,22 +57,22 @@ def changeDP(v, a):
 	#print "V: %d" %V
 	#print ", A: %d\n" %A
 	
-	for v in range(0, A): #was for v in range(2, A):
+	for v in range(A): #was for v in range(2, A):
 		#print "v\n"
-		min = 9999999 #large number to represent infinity
-		for i in range(1, n):
+		#min = 9999999 #large number to represent infinity
+		coinCount = v
+		newCoin = 1
+		for i in [n for n in V if n <= v]:
 			#print "i\n"
-			if v >= V[i]:
+			if C[v-i] + 1 < coinCount:
 				#print "v >= V[i], yes"
-				if (T[v - V[i]] + 1) < min:
-					#print "(T[v - V[i]] + 1) < min, yes"
-					min = (T[v - V[i]] + 1)
-					coin = i
+				coinCount = C[v-i] + 1
+				newCoin = i
 		#T[v] = min
 		#print "insert\n"
-		T.insert(v, min)
+		T.insert(v, newCoin)
 		#coins[v] = coin
-		C.insert(v, coin)
+		C.insert(v, coinCount)
 	newC = convertChange(C, A, V)
 	return newC
 
@@ -85,7 +85,7 @@ def convertChange(C, A, V):
 	while coin > 0:
 		print "size of C:", len(C)
 		print "coin = ", coin
-		thisCoin = V[C[coin-1]]
+		thisCoin = V[C[coin]]
 		print "thisCoin = ", thisCoin
 		newC.insert(i, thisCoin)
 		coin = coin - thisCoin
