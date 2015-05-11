@@ -45,38 +45,40 @@ def scanInput():
 
 def changeDP(v, a):
 	global amountIndex
-	V = v[amountIndex] #Set of coins used to reach target sum
-	A = a[amountIndex] #Target sum for coins 
-	T = [] #Table of minimum number of coins for v
-	C = [] #Array of count of each type of coin needed to reach target sum 
+	V = v[amountIndex] # coinValueList: Set of coins used to reach target sum
+	A = a[amountIndex] # change: Target sum for coins 
+	T = [] # coinsUsed: Table of minimum number of coins for v
+	C = [] # minCoins: Array of count of each type of coin needed to reach target sum 
 	
 	for i in range(A+1): #was for v in range(2, A):
 		coinCount = i
-		newCoin = 1
+		newCoin = V[0]
 		for j in [n for n in V if n <= i]:
 			if C[i-j] + 1 < coinCount:
 				coinCount = C[i-j] + 1
 				newCoin = j
-		T.insert(i, newCoin)
 		C.insert(i, coinCount)
+		T.insert(i, newCoin)
 	print "C[i] = ", C[i]
-	newC = convertChange(C, A, V)
+	newC = convertChange(A, T)
 	return newC
 
 
 #takes the set of values found in changeDP() and extracts the answer
-def convertChange(C, A, V):
+def convertChange(A, T):
 	newC = []
 	i = 0
 	coin = A
 	while coin > 0:
-		print "size of C:", len(C)
+		print "size of T:", len(T)
 		print "coin = ", coin
-		thisCoin = V[C[coin]]
+		thisCoin = T[coin]
 		print "thisCoin = ", thisCoin
 		newC.insert(i, thisCoin)
 		coin = coin - thisCoin
+		print "coin2 = ", coin
 		i = i + 1
+	print "returning ", newC
 	return newC
 
 
