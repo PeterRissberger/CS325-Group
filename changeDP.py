@@ -49,30 +49,17 @@ def changeDP(v, a):
 	A = a[amountIndex] #Target sum for coins 
 	T = [] #Table of minimum number of coins for v
 	C = [] #Array of count of each type of coin needed to reach target sum 
-	#coinIndex = len(T) - 1 #Used to iterate through coin values 
-	n = len(V) #size of data set
-	coin = 0
-	T.insert(0, 0) #large number to represent infinity
-	#C.insert(0, 0)
-	#print "V: %d" %V
-	#print ", A: %d\n" %A
 	
-	for v in range(A): #was for v in range(2, A):
-		#print "v\n"
-		#min = 9999999 #large number to represent infinity
-		coinCount = v
+	for i in range(A+1): #was for v in range(2, A):
+		coinCount = i
 		newCoin = 1
-		for i in [n for n in V if n <= v]:
-			#print "i\n"
-			if C[v-i] + 1 < coinCount:
-				#print "v >= V[i], yes"
-				coinCount = C[v-i] + 1
-				newCoin = i
-		#T[v] = min
-		#print "insert\n"
-		T.insert(v, newCoin)
-		#coins[v] = coin
-		C.insert(v, coinCount)
+		for j in [n for n in V if n <= i]:
+			if C[i-j] + 1 < coinCount:
+				coinCount = C[i-j] + 1
+				newCoin = j
+		T.insert(i, newCoin)
+		C.insert(i, coinCount)
+	print "C[i] = ", C[i]
 	newC = convertChange(C, A, V)
 	return newC
 
