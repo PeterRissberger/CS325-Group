@@ -45,35 +45,34 @@ def scanInput():
 
 def changeDP(v, a):
 	global amountIndex
-	coins = v[amountIndex] #Set of coins used to reach target sum
-	n = a[amountIndex] #Target sum for coins 
-	change = [] #Array of count of each type of coin needed to reach target sum 
-	coinIndex = len(coins) - 1 #Used to iterate through coin values 
-	k = len(v) #size of data set
-	n = len(a)
+	V = v[amountIndex] #Set of coins used to reach target sum
+	A = a[amountIndex] #Target sum for coins 
+	T = [] #Table of minimum number of coins for v
+	C = [] #Array of count of each type of coin needed to reach target sum 
+	#coinIndex = len(T) - 1 #Used to iterate through coin values 
+	n = len(V) #size of data set
 	coin = 0
-	change.insert(0, 0)
-	coins.insert(0, 0)
+	T.insert(0, 0) #large number to represent infinity
+	#C.insert(0, 0)
 	
-	#for x in range(2, n):
-	for p in range(2, n):
-		print "p\n"
+	for v in range(2, A):
+		#print "v\n"
 		min = 9999999 #large number to represent infinity
-		for i in range(1, k):
-			print "i\n"
-			if p >= coins[i]:
-				print "p >= coins[i], yes"
-				if (change[p - coins[i]] + 1) < min:
-					print "(change[p - coins[i]] + 1) < min, yes"
-					min = (change[p - coins[i]] + 1)
+		for i in range(1, n):
+			#print "i\n"
+			if v >= V[i]:
+				#print "v >= V[i], yes"
+				if (T[v - V[i]] + 1) < min:
+					#print "(T[v - V[i]] + 1) < min, yes"
+					min = (T[v - V[i]] + 1)
 					coin = i
-		#change[p] = min
-		print "insert\n"
-		change.insert(p, min)
-		#coins[p] = coin
-		coins.insert(p, coin)
+		#T[v] = min
+		#print "insert\n"
+		T.insert(v, min)
+		#coins[v] = coin
+		C.insert(v, coin)
 	
-	return change
+	return C
 
 
 #############
@@ -87,7 +86,7 @@ print "Amounts: "
 print amounts
 
 
-outfile = open('Amountchange.txt', 'w')
+outfile = open('AmountchangeDP.txt', 'w')
 outfile.write("ChangeDP Algorithm Results:\n")
 
 #Run algorithm for all amounts
