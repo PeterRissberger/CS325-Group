@@ -59,27 +59,34 @@ def changeDP(v, a):
 				newCoin = j
 		C.insert(i, coinCount)
 		T.insert(i, newCoin)
-	print "C[i] = ", C[i]
-	newC = convertChange(A, T)
+	#print "C[i] = ", C[i]
+	newC = convertChange(A, T, V)
 	return newC
 
 
 #takes the set of values found in changeDP() and extracts the answer
-def convertChange(A, T):
-	newC = []
+def convertChange(A, T, V):
+	temp = []
 	i = 0
 	coin = A
+	coinIndex = []
 	while coin > 0:
-		print "size of T:", len(T)
-		print "coin = ", coin
+		#print "size of T:", len(T)
+		#print "coin = ", coin
 		thisCoin = T[coin]
-		print "thisCoin = ", thisCoin
-		newC.insert(i, thisCoin)
+		#print "thisCoin = ", thisCoin
+		temp.insert(i, thisCoin)
 		coin = coin - thisCoin
-		print "coin2 = ", coin
+		#print "coin2 = ", coin
 		i = i + 1
-	print "returning ", newC
-	return newC
+	for j in range(len(V)):
+		sum = 0
+		for t in range (len(temp)):
+			if temp[t] == V[j]:
+				sum = sum + 1
+		coinIndex.insert(j, sum)
+	#print "returning ", coinIndex
+	return coinIndex
 
 
 #############
@@ -99,11 +106,19 @@ outfile.write("ChangeDP Algorithm Results:\n")
 #Run algorithm for all amounts
 for x in range(len(amounts)):
 	change = changeDP(values, amounts)
-	
 	#File output
 	outfile.write("Results for problem " + str(amountIndex) + "\nCoins: " + str(values[amountIndex]) + "\n")
 	outfile.write("Amount: " + str(amounts[amountIndex]) + "\n") 
 	outfile.write("Change: " + str(change) + "\n\n")
 	
+	#Calculate minimum number of required coins
+	minimum = 0
+	for y in change: 
+		minimum += y
+	outfile.write("Minumum coins: " + str(minimum) + "\n\n")
+	import timeit
+	#print("The timing was: ")
+	print(timeit.timeit("changeDP(values, amounts)", setup="from __main__ import changeDP, values, amounts", number=1))
+	#print(" seconds.")
 
 	amountIndex += 1
