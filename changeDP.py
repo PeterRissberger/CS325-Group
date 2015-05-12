@@ -50,7 +50,7 @@ def changeDP(v, a):
 	T = [] # coinsUsed: Table of minimum number of coins for v
 	C = [] # minCoins: Array of count of each type of coin needed to reach target sum 
 	
-	for i in range(A+1): #was for v in range(2, A):
+	for i in xrange(A+1):
 		coinCount = i
 		newCoin = V[0]
 		for j in [n for n in V if n <= i]:
@@ -79,9 +79,9 @@ def convertChange(A, T, V):
 		coin = coin - thisCoin
 		#print "coin2 = ", coin
 		i = i + 1
-	for j in range(len(V)):
+	for j in xrange(len(V)):
 		sum = 0
-		for t in range (len(temp)):
+		for t in xrange (len(temp)):
 			if temp[t] == V[j]:
 				sum = sum + 1
 		coinIndex.insert(j, sum)
@@ -104,7 +104,7 @@ outfile = open('AmountchangeDP.txt', 'w')
 outfile.write("ChangeDP Algorithm Results:\n")
 
 #Run algorithm for all amounts
-for x in range(len(amounts)):
+for x in xrange(len(amounts)):
 	change = changeDP(values, amounts)
 	#File output
 	outfile.write("Results for problem " + str(amountIndex) + "\nCoins: " + str(values[amountIndex]) + "\n")
