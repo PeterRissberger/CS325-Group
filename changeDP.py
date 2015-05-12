@@ -43,6 +43,8 @@ def scanInput():
 	outfile.truncate(0)
 	outfile.close()
 
+
+#Referenced http://interactivepython.org/runestone/static/pythonds/Recursion/DynamicProgramming.html
 def changeDP(v, a):
 	global amountIndex
 	V = v[amountIndex] # coinValueList: Set of coins used to reach target sum
