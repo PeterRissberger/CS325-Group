@@ -102,7 +102,7 @@ print "Amounts: "
 print amounts
 
 
-outfile = open('AmountchangeDP.txt', 'w')
+outfile = open('Amountchange.txt', 'w')
 outfile.write("ChangeDP Algorithm Results:\n")
 
 #Run algorithm for all amounts
