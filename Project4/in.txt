@@ -1,0 +1,3 @@
+Tualatin 10 20
+Corvallis 30 40
+Eugene 50 60
