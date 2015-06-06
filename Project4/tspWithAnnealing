@@ -1,0 +1,738 @@
+//CS 325 Project 4: TSP
+//Alex Way, Kristin Swanson, Peter Rissberger
+//Build with: g++ -std=c++0x -g -o tsp tsp.cpp
+//Run with: tsp inFile.txt
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <string.h>
+#include <cmath>
+#include <algorithm>
+#include <stdlib.h>
+
+#define T_INIT                        100
+#define FINAL_T                       0.1
+#define COOLING                       0.9 /* to lower down T (< 1) */
+#define TRIES_PER_T                   500*n
+#define IMPROVED_PATH_PER_T           60*n
+
+/*
+ * Portable Uniform Integer Random Number in [0-2^31] range
+ * Performs better than ansi-C rand()
+ * D.E Knuth, 1994 - The Stanford GraphBase
+ */
+#define RANDOM()        (*rand_fptr >= 0 ? *rand_fptr-- : flipCycle ())
+#define two_to_the_31   ((unsigned long)0x80000000)
+#define RREAL           ((double)RANDOM()/(double)two_to_the_31)
+
+static long A[56]= {-1};
+long *rand_fptr = A;
+
+#define mod_diff(x,y)   (((x)-(y))&0x7fffffff)
+
+using namespace std;
+
+//Global vars
+ifstream inFile;
+ofstream outFile;
+
+///---------------------------
+//Referenced: http://www3.cs.stonybrook.edu/~algorith/implement/tsp/implement.shtml
+
+long flipCycle()
+{
+	register long *ii,*jj;
+	for (ii = &A[1], jj = &A[32]; jj <= &A[55]; ii++, jj++)
+	*ii= mod_diff (*ii, *jj);
+
+	for (jj = &A[1]; ii <= &A[55]; ii++, jj++)
+	*ii= mod_diff (*ii, *jj);
+	rand_fptr = &A[54];
+	return A[55];
+}
+
+void initRand (long seed)
+{
+	register long i;
+	register long prev = seed, next = 1;
+	seed = prev = mod_diff (prev,0);
+	A[55] = prev;
+	for (i = 21; i; i = (i+21)%55)
+	{
+		A[i] = next;
+		next = mod_diff (prev, next);
+		if (seed&1) seed = 0x40000000 + (seed >> 1);
+		else seed >>= 1;
+		next = mod_diff (next,seed);
+		prev = A[i];
+	}
+
+	for (i = 0; i < 7; i++) flipCycle();
+}
+
+long unifRand (long m)
+{
+	register unsigned long t = two_to_the_31 - (two_to_the_31%m);
+	register long r;
+	do {
+		r = RANDOM();
+	} while (t <= (unsigned long)r);
+	return r%m;
+}
+
+/*
+ * Defs
+ */
+#define MOD(i,n)    ((i) % (n) >= 0 ? (i) % (n) : (i) % (n) + (n))
+
+typedef int Path[3];      /* specify how to change path */
+typedef struct {
+	float x, y;
+	char *name;
+} Point;
+
+/*
+ * State vars
+ */
+int     n, verbose = 0;
+Point   *cities;
+int     *dist;
+int     *iorder, *jorder;
+float   b[4];
+
+#define D(x,y) dist[(x)*n+y]
+#define SCALEX(x) (50+500.0/(b[1]-b[0])*(x - b[0]))
+#define SCALEY(y) (50+700.0/(b[3]-b[2])*(y - b[2]))
+
+float  stodeg(char *deg)
+{
+	int i,j,k,l,m,n,o;
+	float x = 0;
+	i = deg[0]=='N'||deg[0]=='E';
+	j = deg[0]=='S'||deg[0]=='W';
+	if (i||j) {
+		++deg;
+		o = sscanf(deg, "%2d%2d%2d%2d", &k, &l, &m, &n);
+		x = k * 100.0 + l * 1.0 + m /100.0 + n / 10000.0 ;
+	        if (j) x=-x;
+	} else x = atof(deg);
+        return x;
+}
+
+void readCities(FILE *f)
+{
+	int i, j;
+	int dx, dy;
+	char sbuf[512];
+	char sx[512], sy[512];
+
+	if (f && (fscanf(f,"%d", &n) != 1)) {
+		fprintf(stderr, "input syntax error\n");
+		exit (-1);
+	}
+	if (verbose) fprintf (stderr, "Cities:\n%d\n", n);
+
+	if (!(cities = (Point*) malloc (n * sizeof(Point))) ||
+		    !(dist   = (int*) malloc (n * n * sizeof(int))) ||
+		    !(iorder = (int*) malloc (n * sizeof(int)))   ||
+		    !(jorder = (int*) malloc (n * sizeof(int))))
+		{
+			fprintf (stderr, "Memory allocation pb...\n");
+			exit(-1);
+		}
+	for (i = 0; i < n; i++)
+	{
+		if (f) {
+			if (fscanf(f,"%s %s %[^\n]*", sx, sy, sbuf) != 3) {
+				fprintf(stderr, "input syntax error\n");
+				exit (-1);
+			}
+			cities[i].name = strdup(sbuf);
+			cities[i].x  = stodeg(sx);
+			cities[i].y  = stodeg(sy);
+		} else {
+			cities[i].x = unifRand (10*n);
+			cities[i].y = unifRand (10*n);
+			sprintf(sbuf, "%d",i);
+			cities[i].name = strdup(sbuf);
+		}
+#define min(a,b) (a)<(b)?(a):(b)
+#define max(a,b) (a)>(b)?(a):(b)
+#define sqr(x)   ((x)*(x))
+		if (i==0)
+		{
+			b[0]= cities[i].x; b[1]= b[0];
+			b[2]= cities[i].y; b[3]= b[2];
+		} else {
+			b[0] = min(b[0],cities[i].x); b[1] = max(b[1],cities[i].x);
+			b[2] = min(b[2],cities[i].y); b[3] = max(b[3],cities[i].y);
+		}
+		if (verbose)
+		{
+			fprintf(stderr, "%d %d ", (int)cities[i].x, (int)cities[i].y);
+			if ((i+1)%10 == 0) fprintf(stderr,"\n");
+		}
+	}
+	if (verbose)
+	{
+		fprintf(stderr,"[%d %d %d %d]\n",(int)b[0],
+			(int)b[1], (int)b[2], (int)b[3]);
+	}
+	/* compute inter cities distance matrix */
+	for (i = 0; i < n; i++)
+	{
+		for (j = 0; j < n; j++)
+		{
+			dx = (int)SCALEX(cities[i].x)-(int)SCALEX(cities[j].x);
+			dy = (int)SCALEY(cities[i].y)-(int)SCALEY(cities[j].y);
+
+			/* D(i,j) satisfies triangle inequality */
+			D(i,j) = sqrt ((int)(dx*dx + dy*dy));
+		}
+	}
+
+}
+
+int pathLength (int *iorder)
+{
+	int i, j, k;
+	int len = 0;
+	for (i = 0; i < n-1; i++)
+	{
+		len += D(iorder[i], iorder[i+1]);
+	}
+	len += D(iorder[n-1], iorder[0]); /* close path */
+	return (len);
+}
+
+void printSol()
+{
+	double x, y;
+	int i;
+	printf ("%%!\n%%%%Path Length %d\n", pathLength(iorder));
+	printf (".01 setlinewidth/l{lineto currentpoint 1.5 0 360 arc}def/m{moveto}def\n");
+	printf ("/n{currentpoint 3 -1 roll dup stringwidth pop 2 div neg 5 rmoveto show moveto}def\n");
+        printf ("/s{currentpoint stroke moveto}def/Helvetica findfont\n");
+        printf ("8 scalefont setfont/st{gsave show grestore}def\n");
+	for (i = 0; i <= n; i++)
+	{
+		x = SCALEX(cities[iorder[i%n]].x);
+		y = SCALEY(cities[iorder[i%n]].y);
+		if (!i) printf ("%f %f m",x,y);
+		printf ("%s (%s) %f %f l %s\n", i%20==0&&i?" s\n":"",
+			cities[iorder[i%n]].name,x,y,cities[iorder[i%n]].name?"n":"");
+	}
+	printf ("s showpage\n");
+	fflush (stdout);
+}
+
+/*
+ * Prim's approximated TSP tour
+ * See also [Cristophides'92]
+ */
+void findEulerianPath()
+{
+	int *mst, *arc;
+	int d, i, j, k, l, a;
+	float maxd;
+        if (!(mst = (int*) malloc(n * sizeof(int))) ||
+	    !(arc = (int*) malloc(n * sizeof(int))))
+	{
+		fprintf (stderr, "Malloc failed.\n");
+		exit(-3);
+	}
+/* re-use vars */
+#define dis jorder
+
+	maxd = sqr(b[1]-b[0])+sqr(b[3]-b[2]);
+	d    = maxd;
+	dis[0] = -1;
+	for (i = 1; i < n; i++)
+	{
+		dis[i] = D(i,0); arc[i] = 0;
+	        if (d > dis[i])
+		{
+			d = dis[i];
+			j = i;
+		}
+	}
+
+	/*
+	 * O(n^2) Minimum Spanning Trees by Prim and Jarnick
+	 * for graphs with adjacency matrix.
+	 */
+	for (a = 0; a < n - 1; a++)
+	{
+		mst[a] = j * n + arc[j]; /* join fragment j with MST */
+		dis[j] = -1;
+		d = maxd;
+		for (i = 0; i < n; i++)
+		{
+			if (dis[i] >= 0) /* not connected yet */
+			{
+				if (dis[i] > D(i,j))
+				{
+					dis[i] = D(i,j);
+					arc[i] = j;
+				}
+				if (d > dis[i])
+				{
+					d = dis[i];
+					k = i;
+				}
+			}
+		}
+		j = k;
+	}
+
+	/*
+	 * Preorder Tour of MST
+	 */
+#define VISITED(x) jorder[x]
+#define NQ(x) arc[l++] = x
+#define DQ()  arc[--l]
+#define EMPTY (l==0)
+
+	for (i = 0; i < n; i++) VISITED(i) = 0;
+	k = 0; l = 0; d = 0; NQ(0);
+	while (!EMPTY)
+	{
+		i = DQ();
+		if (!VISITED(i))
+		{
+			iorder[k++] = i;
+			VISITED(i)  = 1;
+			for (j = 0; j < n - 1; j++) /* push all kids of i */
+			{
+				if (i == mst[j]%n) NQ(mst[j]/n);
+			}
+		}
+	}
+	printf ("%%Page 2\n.01 setlinewidth/l{lineto currentpoint 1.5 0 360 arc}def/m{moveto}def/s{stroke}def\n");
+	for (i = 0; i < n - 1; i++)
+	{
+		printf ("(%s) %f %f m n\n",
+			cities[mst[i]/n].name,
+			SCALEX(cities[mst[i]/n].x),
+			SCALEY(cities[mst[i]/n].y));
+		printf ("%f %f l %s\n",
+			SCALEX(cities[mst[i]%n].x),
+			SCALEY(cities[mst[i]%n].y),
+			i%20==0&&!i?"s":"");
+	}
+	printf ("s showpage\n");
+	fflush (stdout);
+	free (mst); free (arc);
+}
+
+/*
+ * Local Search Heuristics
+ *  b-------a        b       a
+ *  .       .   =>   .\     /.
+ *  . d...e .        . e...d .
+ *  ./     \.        .       .
+ *  c       f        c-------f
+ */
+int getThreeWayCost (Path p)
+{
+	int a, b, c, d, e, f;
+	a = iorder[MOD(p[0]-1,n)]; b = iorder[p[0]];
+	c = iorder[p[1]];   d = iorder[MOD(p[1]+1,n)];
+	e = iorder[p[2]];   f = iorder[MOD(p[2]+1,n)];
+	return (D(a,d) + D(e,b) + D(c,f) - D(a,b) - D(c,d) - D(e,f));
+        /* add cost between d and e if non symetric TSP */
+}
+
+void doThreeWay (Path p)
+{
+	int i, count, m1, m2, m3, a, b, c, d, e, f;
+	a = MOD(p[0]-1,n); b = p[0];
+	c = p[1];   d = MOD(p[1]+1,n);
+	e = p[2];   f = MOD(p[2]+1,n);
+
+	m1 = MOD(n+c-b,n)+1;  /* num cities from b to c */
+	m2 = MOD(n+a-f,n)+1;  /* num cities from f to a */
+	m3 = MOD(n+e-d,n)+1;  /* num cities from d to e */
+
+	count = 0;
+	/* [b..c] */
+	for (i = 0; i < m1; i++) jorder[count++] = iorder[MOD(i+b,n)];
+
+	/* [f..a] */
+	for (i = 0; i < m2; i++) jorder[count++] = iorder[MOD(i+f,n)];
+
+	/* [d..e] */
+	for (i = 0; i < m3; i++) jorder[count++] = iorder[MOD(i+d,n)];
+
+	/* copy segment back into iorder */
+	for (i = 0; i < n; i++) iorder[i] = jorder[i];
+}
+
+/*
+ *   c..b       c..b
+ *    \/    =>  |  |
+ *    /\        |  |
+ *   a  d       a  d
+ */
+int getReverseCost (Path p)
+{
+	int a, b, c, d;
+	a = iorder[MOD(p[0]-1,n)]; b = iorder[p[0]];
+	c = iorder[p[1]];   d = iorder[MOD(p[1]+1,n)];
+
+	return (D(d,b) + D(c,a) - D(a,b) - D(c,d));
+        /* add cost between c and b if non symetric TSP */
+}
+
+void doReverse(Path p)
+{
+	int i, j, nswaps, first, last, tmp;
+
+        /* reverse path b...c */
+	nswaps = (MOD(p[1]-p[0],n)+1)/2;
+	for (i = 0; i < nswaps; i++)
+        {
+		first = MOD(p[0]+i, n);
+		last  = MOD(p[1]-i, n);
+		tmp   = iorder[first];
+		iorder[first] = iorder[last];
+		iorder[last]  = tmp;
+        }
+}
+
+int annealing(int xs[], int ys[], int iorder[], int points)
+{
+	Path p;
+	int    i=1, j, pathchg;
+	int    numOnPath, numNotOnPath;
+	int    pathlen, bestlen;
+	double energyChange, T;
+
+	pathlen = pathLength (iorder);
+	bestlen = pathlen;
+
+	for (T = T_INIT; T > FINAL_T; T *= COOLING)  /* annealing schedule */
+        {
+		pathchg = 0;
+		for (j = 0; j < TRIES_PER_T; j++)
+		{
+			do {
+				p[0] = unifRand (n);
+				p[1] = unifRand (n);
+				if (p[0] == p[1]) p[1] = MOD(p[0]+1,n); /* non-empty path */
+				numOnPath = MOD(p[1]-p[0],n) + 1;
+				numNotOnPath = n - numOnPath;
+			} while (numOnPath < 2 || numNotOnPath < 2); /* non-empty path */
+
+			if (RANDOM() % 2) /*  threeWay */
+			{
+				do {
+					p[2] = MOD(unifRand (numNotOnPath)+p[1]+1,n);
+				} while (p[0] == MOD(p[2]+1,n)); /* avoids a non-change */
+
+				energyChange = getThreeWayCost (p);
+				if (energyChange < 0 || RREAL < exp(-energyChange/T) )
+				{
+					pathchg++;
+					pathlen += energyChange;
+					doThreeWay (p);
+				}
+			}
+			else            /* path Reverse */
+			{
+				energyChange = getReverseCost (p);
+				if (energyChange < 0 || RREAL < exp(-energyChange/T))
+				{
+					pathchg++;
+					pathlen += energyChange;
+					doReverse(p);
+				}
+			}
+			if (pathlen < bestlen) bestlen = pathlen;
+			if (pathchg > IMPROVED_PATH_PER_T) break; /* finish early */
+		}
+		if (verbose) fprintf (stderr,  "T:%f L:%d B:%d C:%d\n", T, pathlen, bestlen, pathchg);
+		if (pathchg == 0) break;   /* if no change then quit */
+        }
+        return bestlen;
+}
+///-----------------------------
+
+//Reads file, counts input, returns arrays to main
+int lineCount(char *infileName)
+{
+	int lineCount = 0;
+
+  //Create/open in/outFile
+  inFile.open(infileName);
+
+  string outfileName = infileName;
+  outfileName += ".tour";
+  outFile.open(outfileName);
+
+	//Count lines in file
+	for (string line; getline(inFile, line); ++lineCount);
+	cout << "Lines in file: " << lineCount << endl;
+	inFile.clear();
+	inFile.seekg(0, ios::beg);
+	cout << "Lines: " << lineCount << endl;
+	return lineCount;
+}
+
+//Populate Names, Xs, and Ys of arrays with inFile data
+int populateArrays(string names[], int xs[], int ys[], int lines)
+{
+
+	string str;
+	int i = 0;
+	cout << sizeof(xs);
+	while (i < lines)
+	{
+		cout << "Populating index " << i << endl;
+
+		//Input city name
+		inFile >> str;
+		cout << "Name = " << str << endl;
+		names[i] = str;
+
+		//Input city's x coordinate
+		inFile >> str;
+		cout << "X = " << str << endl;
+		xs[i] = stoi(str);
+
+		//Input city's y coordinate
+		inFile >> str;
+		cout << "Y = " << str << endl;
+		ys[i] = stoi(str);
+
+		i++;
+	}
+}
+
+// Return true if test in arr
+bool isIn(int arr[], int test, int length){
+  for (int i = 0; i < length; i++) {
+    if (arr[i] == test) return true;
+  }
+  return false;
+}
+
+// Returns distance between two points to the nearest integer
+int distance(float x1, float y1, float x2, float y2) {
+  return (int) (sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2)) + .5);
+}
+
+unsigned int long tourLength(int xs[], int ys[], int order[], int points) {
+  unsigned int long length = 0;
+
+  for (int i = 0; i < points - 1; i++) {
+    length += distance(xs[order[i]], ys[order[i]], xs[order[i+1]], ys[order[i+1]]);
+  }
+  length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
+
+  return length;
+}
+
+// Greedy algorithm for initial tour, returns the tour length
+unsigned int long greedyTour(int xs[], int ys[], int order[], int points)
+{
+  unsigned int long length = 0, current, bestPoint = 0, bestDist, nextDist;
+  bool firstDist;
+
+  // For each point, compare it to each of the other points that have not
+  // yet been done, picking the point with the smallest distance to be next
+  // in order
+  for (int i = 0; i < points; i++) {
+    current = bestPoint;
+    order[i] = current;
+    firstDist = true;
+    bestDist = 0;
+    cout << "i = " << i << "\n";
+    for (int j = 0; j < points; j++) {
+        //cout << "j = " << j << "\n";
+      if (isIn(order, j, points)) continue;
+      nextDist = distance(xs[current], ys[current], xs[j], ys[j]);
+      if (nextDist < bestDist || firstDist) {
+	bestDist = nextDist;
+	bestPoint = j;
+	firstDist = false;
+      }
+    }
+      length += bestDist;
+  }
+  // Add the connection from the last point to the first
+  length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
+  cout << "Greedy tour total: " << length << endl;
+  return length;
+}
+
+// 2-otp improvement from initial tour (as giving by order)
+int opt2Tour(int xs[], int ys[], int order[], int points)
+{
+  int length = 0, bestPointIdx, bestDist, nextDist;
+  bool isChange;
+
+  cout << "Previous order: " << endl;
+  for (int i = 0; i < points; i++) {
+    cout << order[i] << endl;
+  }
+
+  // For each point, consider switching it with each other point, storing the
+  // best solution until you have compared it to each point.  Once a point
+  // is considered for all, it does not need to be considered again.
+  for (int i = 0; i < points - 1; i++) {
+    // Set best to the current distance and point
+    bestDist = tourLength(xs, ys, order, points);
+    bestPointIdx = i;
+    for (int j = i+1; j < points; j++) {
+      // Get the tour distance if we swapped order[i] with order[j]
+      swap(order[i], order[j]);
+      nextDist = tourLength(xs, ys, order, points);
+      swap(order[i], order[j]);
+
+      // if the new tour is shorter, store the point index j and the distance
+      // of its tour as best option so far
+      if (nextDist < bestDist) {
+  	bestDist = nextDist;
+	bestPointIdx = j;
+      }
+    }
+    // Swap points if a better tour was found
+    if (bestPointIdx != i) {
+      swap(order[i], order[bestPointIdx]);
+      isChange = true;
+    }
+  }
+  length = tourLength(xs, ys, order, points);
+  cout << "Improved length: " << length << endl;
+
+  cout << "Improved order: " << endl;
+  for (int i = 0; i < points; i++) {
+    cout << order[i] << endl;
+  }
+
+ return length;
+}
+
+// 2-otp/3-opt improvement from initial tour (as giving by order)
+int opt3Tour(int xs[], int ys[], int order[], int points, string names[])
+{
+  unsigned int long length = 0, bestPointIdx, bestPointIdx2, bestDist, nextDist;
+  bool isChange; //TODO Use to re-run the entire algorithm if any swap was made
+
+  cout << "Previous order: " << endl;
+  for (int i = 0; i < points; i++) {
+    cout << "a" << i << " " << order[i] << endl;
+  }
+
+  // For each point, consider switching it with each other point, storing the
+  // best solution until you have compared it to each point.  Once a point
+  // is considered for all, it does not need to be considered again.
+  for (int i = 0; i < points - 1; i++) {
+        cout << "i = " << i << "\n";
+    // Set best to the current distance and point
+    bestDist = tourLength(xs, ys, order, points);
+    bestPointIdx = i;
+    bestPointIdx2 = i;
+    for (int j = i+1; j < points; j++) {
+        cout << "j = " << j << "\n";
+      // Get the tour distance if we swapped order[i] with order[j]
+      swap(order[i], order[j]);
+      nextDist = tourLength(xs, ys, order, points);
+      swap(order[i], order[j]);
+
+      // if the new tour is shorter, store the point index j and the distance
+      // of its tour as best option so far
+      if (nextDist < bestDist) {
+  	bestDist = nextDist;
+	bestPointIdx = j;
+        bestPointIdx2 = i;
+      }
+      cout << "entering k \n";
+      for (int k = j+1; k < points; k++) {
+        //cout << "k = " << k << "\n";
+
+      // Get the tour distance if we swapped 123 to 231
+      swap(order[i], order[j]); //213
+      swap(order[j], order[k]); //231
+      nextDist = tourLength(xs, ys, order, points);
+      swap(order[j], order[k]);
+      swap(order[i], order[j]);
+
+      // if the new tour is shorter, store the points to swap in order
+      if (nextDist < bestDist) {
+  	bestDist = nextDist;
+	bestPointIdx = j;
+	bestPointIdx2 = k;
+      }
+      // Get the tour distance if we swapped 123 to 312
+      swap(order[i], order[k]); //321
+      swap(order[j], order[k]); //312
+      nextDist = tourLength(xs, ys, order, points);
+      swap(order[j], order[k]);
+      swap(order[i], order[k]);
+
+      // if the new tour is shorter, store the points to swap in order
+      if (nextDist < bestDist) {
+  	bestDist = nextDist;
+	bestPointIdx = k;
+	bestPointIdx2 = j;
+      }
+      }
+    }
+    // Swap points if a better tour was found
+    if (bestPointIdx != i) {
+      if (bestPointIdx2 != i) {
+	swap(order[i], order[bestPointIdx]);
+	swap(order[bestPointIdx], order[bestPointIdx2]);
+      cout << "Swapped 3 edges" << endl;
+      } else {
+        swap(order[i], order[bestPointIdx]);
+	cout << "Swapped 2 edges" << endl;
+      }
+      isChange = true;
+    }
+    cout << "Current tour length: " << tourLength(xs, ys, order, points) << endl;
+
+  }
+
+  cout << "Improved order: " << endl;
+  for (int i = 0; i < points; i++) {
+    cout << "b" << i << " "  << order[i] << endl;
+  }
+
+  length = tourLength(xs, ys, order, points);
+  cout << "Improved length: " << length << endl;
+
+  //Modified to output to Outfile
+  outFile << "Length: " << length;
+
+  for (int i = 0; i < points; i++) {
+    string identifier = names[order[i]];
+    outFile << endl << identifier;
+  }
+
+ return length;
+}
+
+int main(int argc, char *argv[])
+{
+	//Count lines in input file
+	int lines = lineCount(argv[1]);
+
+	//Populate arrays with cities and coordinates
+	string names[lines];
+	int xs[lines];
+	int ys[lines];
+	int order[lines];
+  	for (int i = 0; i < lines; i++) order[i] = -1;
+	populateArrays(names, xs, ys, lines);
+
+	greedyTour(xs, ys, order, lines);
+	//opt2Tour(xs, ys, order, lines);
+	int totalDist = annealing(xs, ys, order, lines);
+	//totalDist = opt3Tour(xs, ys, order, lines, names);
+	//totalDist = opt3Tour(xs, ys, order, lines, names);
+	return 0;
+}
