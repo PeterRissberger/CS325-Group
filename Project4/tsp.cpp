@@ -15,13 +15,18 @@ using namespace std;
 ifstream inFile; 
 ofstream outFile; 
 
-
 //Reads file, counts input, returns arrays to main
 int lineCount(char *infileName)
 {
 	int lineCount = 0; 
-	inFile.open(infileName); 
-
+	
+  //Create/open in/outFile
+  inFile.open(infileName); 
+  
+  string outfileName = infileName;
+  outfileName += ".tour";
+  outFile.open(outfileName);
+  
 	//Count lines in file 
 	for (string line; getline(inFile, line); ++lineCount);
 	cout << "Lines in file: " << lineCount << endl; 
@@ -165,7 +170,7 @@ int opt2Tour(int xs[], int ys[], int order[], int points)
 }
 
 // 2-otp/3-opt improvement from initial tour (as giving by order)
-int opt3Tour(int xs[], int ys[], int order[], int points)
+int opt3Tour(int xs[], int ys[], int order[], int points, string names[])
 {
   int length = 0, bestPointIdx, bestPointIdx2, bestDist, nextDist;
   bool isChange; //TODO Use to re-run the entire algorithm if any swap was made
@@ -240,12 +245,21 @@ int opt3Tour(int xs[], int ys[], int order[], int points)
     cout << "Current tour length: " << tourLength(xs, ys, order, points) << endl;
    
   } 
+
   length = tourLength(xs, ys, order, points);
   cout << "Improved length: " << length << endl;
- 
+
   cout << "Improved order: " << endl;
   for (int i = 0; i < points; i++) {
     cout << order[i] << endl; 
+  }
+
+  //Modified to output to Outfile
+  outFile << "Length: " << length;
+
+  for (int i = 0; i < points; i++) {
+    string identifier = names[order[i]];
+    outFile << endl << identifier; 
   }
 
  return length;
@@ -265,6 +279,6 @@ int main(int argc, char *argv[])
 	populateArrays(names, xs, ys, lines);
 	
 	greedyTour(xs, ys, order, lines);
-	int totalDist = opt3Tour(xs, ys, order, lines);
+	int totalDist = opt3Tour(xs, ys, order, lines, names);
 	return 0;
 }
