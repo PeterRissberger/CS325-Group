@@ -37,6 +37,83 @@ using namespace std;
 ifstream inFile;
 ofstream outFile;
 
+
+//Reads file, counts input, returns arrays to main
+int lineCount(char *infileName)
+{
+	int lineCount = 0;
+
+  //Create/open in/outFile
+  inFile.open(infileName);
+
+  string outfileName = infileName;
+  outfileName += ".tour";
+  outFile.open(outfileName);
+
+	//Count lines in file
+	for (string line; getline(inFile, line); ++lineCount);
+	cout << "Lines in file: " << lineCount << endl;
+	inFile.clear();
+	inFile.seekg(0, ios::beg);
+	cout << "Lines: " << lineCount << endl;
+	return lineCount;
+}
+
+//Populate Names, Xs, and Ys of arrays with inFile data
+int populateArrays(string names[], int xs[], int ys[], int lines)
+{
+
+	string str;
+	int i = 0;
+	cout << sizeof(xs);
+	while (i < lines)
+	{
+		cout << "Populating index " << i << endl;
+
+		//Input city name
+		inFile >> str;
+		cout << "Name = " << str << endl;
+		names[i] = str;
+
+		//Input city's x coordinate
+		inFile >> str;
+		cout << "X = " << str << endl;
+		xs[i] = stoi(str);
+
+		//Input city's y coordinate
+		inFile >> str;
+		cout << "Y = " << str << endl;
+		ys[i] = stoi(str);
+
+		i++;
+	}
+}
+
+// Return true if test in arr
+bool isIn(int arr[], int test, int length){
+  for (int i = 0; i < length; i++) {
+    if (arr[i] == test) return true;
+  }
+  return false;
+}
+
+// Returns distance between two points to the nearest integer
+int distance(float x1, float y1, float x2, float y2) {
+  return (int) (sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2)) + .5);
+}
+
+unsigned int long tourLength(int xs[], int ys[], int order[], int points) {
+  unsigned int long length = 0;
+
+  for (int i = 0; i < points - 1; i++) {
+    length += distance(xs[order[i]], ys[order[i]], xs[order[i+1]], ys[order[i+1]]);
+  }
+  length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
+
+  return length;
+}
+
+
 ///---------------------------
 //Referenced: http://www3.cs.stonybrook.edu/~algorith/implement/tsp/implement.shtml
 
@@ -101,7 +178,7 @@ int     *dist;
 int     *iorder, *jorder;
 float   b[4];
 
-#define D(x,y) dist[(x)*n+y]
+#define D(x,y, points) dist[(x)*points+y]
 #define SCALEX(x) (50+500.0/(b[1]-b[0])*(x - b[0]))
 #define SCALEY(y) (50+700.0/(b[3]-b[2])*(y - b[2]))
 
@@ -187,22 +264,27 @@ void readCities(FILE *f)
 			dx = (int)SCALEX(cities[i].x)-(int)SCALEX(cities[j].x);
 			dy = (int)SCALEY(cities[i].y)-(int)SCALEY(cities[j].y);
 
-			/* D(i,j) satisfies triangle inequality */
-			D(i,j) = sqrt ((int)(dx*dx + dy*dy));
+			/* D(i,j,n) satisfies triangle inequality */
+			D(i,j,n) = sqrt ((int)(dx*dx + dy*dy));
 		}
 	}
 
 }
 
-int pathLength (int *iorder)
+int pathLength (int *order, int points)
 {
+    cout << "pathLength\n";
 	int i, j, k;
 	int len = 0;
-	for (i = 0; i < n-1; i++)
+	cout << "pathLength For Start\n";
+	for (i = 0; i < points-1; i++)
 	{
-		len += D(iorder[i], iorder[i+1]);
+	    cout << "pathLength For\n";
+		len += D(order[i], order[i+1], points);
 	}
-	len += D(iorder[n-1], iorder[0]); /* close path */
+	cout << "Out of For";
+	len += D(order[points-1], order[0], points); /* close path */
+	cout << "past len +=";
 	return (len);
 }
 
@@ -210,7 +292,7 @@ void printSol()
 {
 	double x, y;
 	int i;
-	printf ("%%!\n%%%%Path Length %d\n", pathLength(iorder));
+	printf ("%%!\n%%%%Path Length %d\n", pathLength(iorder, n));
 	printf (".01 setlinewidth/l{lineto currentpoint 1.5 0 360 arc}def/m{moveto}def\n");
 	printf ("/n{currentpoint 3 -1 roll dup stringwidth pop 2 div neg 5 rmoveto show moveto}def\n");
         printf ("/s{currentpoint stroke moveto}def/Helvetica findfont\n");
@@ -250,7 +332,7 @@ void findEulerianPath()
 	dis[0] = -1;
 	for (i = 1; i < n; i++)
 	{
-		dis[i] = D(i,0); arc[i] = 0;
+		dis[i] = D(i,0,n); arc[i] = 0;
 	        if (d > dis[i])
 		{
 			d = dis[i];
@@ -271,9 +353,9 @@ void findEulerianPath()
 		{
 			if (dis[i] >= 0) /* not connected yet */
 			{
-				if (dis[i] > D(i,j))
+				if (dis[i] > D(i,j,n))
 				{
-					dis[i] = D(i,j);
+					dis[i] = D(i,j,n);
 					arc[i] = j;
 				}
 				if (d > dis[i])
@@ -334,13 +416,13 @@ void findEulerianPath()
  *  ./     \.        .       .
  *  c       f        c-------f
  */
-int getThreeWayCost (Path p)
+int getThreeWayCost (Path p, int points)
 {
 	int a, b, c, d, e, f;
 	a = iorder[MOD(p[0]-1,n)]; b = iorder[p[0]];
 	c = iorder[p[1]];   d = iorder[MOD(p[1]+1,n)];
 	e = iorder[p[2]];   f = iorder[MOD(p[2]+1,n)];
-	return (D(a,d) + D(e,b) + D(c,f) - D(a,b) - D(c,d) - D(e,f));
+	return (D(a,d, points) + D(e,b, points) + D(c,f, points) - D(a,b, points) - D(c,d, points) - D(e,f, points));
         /* add cost between d and e if non symetric TSP */
 }
 
@@ -375,33 +457,36 @@ void doThreeWay (Path p)
  *    /\        |  |
  *   a  d       a  d
  */
-int getReverseCost (Path p)
+int getReverseCost (Path p, int points, int order[])
 {
 	int a, b, c, d;
-	a = iorder[MOD(p[0]-1,n)]; b = iorder[p[0]];
-	c = iorder[p[1]];   d = iorder[MOD(p[1]+1,n)];
+	a = order[MOD(p[0]-1,points)]; b = order[p[0]];
+	c = order[p[1]];   d = order[MOD(p[1]+1,points)];
 
-	return (D(d,b) + D(c,a) - D(a,b) - D(c,d));
+    cout << "getReverseCost Values\n";
+
+	//return (D(d,b, points) + D(c,a, points) - D(a,b, points) - D(c,d, points));
+	return (distance(a, c, b, d));
         /* add cost between c and b if non symetric TSP */
 }
 
-void doReverse(Path p)
+void doReverse(Path p, int points, int order[])
 {
 	int i, j, nswaps, first, last, tmp;
 
         /* reverse path b...c */
-	nswaps = (MOD(p[1]-p[0],n)+1)/2;
+	nswaps = (MOD(p[1]-p[0],points)+1)/2;
 	for (i = 0; i < nswaps; i++)
         {
-		first = MOD(p[0]+i, n);
-		last  = MOD(p[1]-i, n);
-		tmp   = iorder[first];
-		iorder[first] = iorder[last];
-		iorder[last]  = tmp;
+		first = MOD(p[0]+i, points);
+		last  = MOD(p[1]-i, points);
+		tmp   = order[first];
+		order[first] = order[last];
+		order[last]  = tmp;
         }
 }
 
-int annealing(int xs[], int ys[], int iorder[], int points)
+int annealing(int xs[], int ys[], int order[], int points, string names[])
 {
 	Path p;
 	int    i=1, j, pathchg;
@@ -409,29 +494,44 @@ int annealing(int xs[], int ys[], int iorder[], int points)
 	int    pathlen, bestlen;
 	double energyChange, T;
 
-	pathlen = pathLength (iorder);
+	int Tries_per_T = 500*points;
+	int Improved_path_per_T = 60*points;
+
+    cout << "StartVars\n";
+	pathlen = tourLength(xs, ys, order, points);//pathLength (order, points);
+	cout << "pathlen\n";
 	bestlen = pathlen;
+	cout << "Vars\n";
 
 	for (T = T_INIT; T > FINAL_T; T *= COOLING)  /* annealing schedule */
         {
+            cout << "For 1\n";
 		pathchg = 0;
-		for (j = 0; j < TRIES_PER_T; j++)
+		for (j = 0; j < Tries_per_T; j++)
 		{
+		    cout << "For 2\n";
 			do {
-				p[0] = unifRand (n);
-				p[1] = unifRand (n);
-				if (p[0] == p[1]) p[1] = MOD(p[0]+1,n); /* non-empty path */
-				numOnPath = MOD(p[1]-p[0],n) + 1;
-				numNotOnPath = n - numOnPath;
+                    cout << "While 1\n";
+				p[0] = unifRand (points);
+				p[1] = unifRand (points);
+				if (p[0] == p[1]) p[1] = MOD(p[0]+1,points); /* non-empty path */
+				numOnPath = MOD(p[1]-p[0],points) + 1;
+				numNotOnPath = points - numOnPath;
 			} while (numOnPath < 2 || numNotOnPath < 2); /* non-empty path */
+
+            cout << "Out of while\n";
 
 			if (RANDOM() % 2) /*  threeWay */
 			{
+                    cout << "in if rand\n";
 				do {
-					p[2] = MOD(unifRand (numNotOnPath)+p[1]+1,n);
-				} while (p[0] == MOD(p[2]+1,n)); /* avoids a non-change */
+                        cout << "While 2\n";
+					p[2] = MOD(unifRand (numNotOnPath)+p[1]+1,points);
+				} while (p[0] == MOD(p[2]+1,points)); /* avoids a non-change */
 
-				energyChange = getThreeWayCost (p);
+                    cout << "Out of while 2\n";
+				energyChange = getThreeWayCost (p, points);
+                    cout << "Past energyChange\n";
 				if (energyChange < 0 || RREAL < exp(-energyChange/T) )
 				{
 					pathchg++;
@@ -441,98 +541,46 @@ int annealing(int xs[], int ys[], int iorder[], int points)
 			}
 			else            /* path Reverse */
 			{
-				energyChange = getReverseCost (p);
+			    cout << "'if rand' else\n";
+				energyChange = getReverseCost (p, points, order);
+				cout << "past energyChange\n";
 				if (energyChange < 0 || RREAL < exp(-energyChange/T))
 				{
+				    cout << "in if 'energyChange'\n";
 					pathchg++;
 					pathlen += energyChange;
-					doReverse(p);
+					cout << "past if values\n";
+					doReverse(p, points, order);
 				}
+				cout << "past if 'energyChange'\n";
 			}
-			if (pathlen < bestlen) bestlen = pathlen;
-			if (pathchg > IMPROVED_PATH_PER_T) break; /* finish early */
+			if (pathlen < bestlen) {cout << "if 'pathlen <'n"; bestlen = pathlen;}
+			if (pathchg > Improved_path_per_T) {cout << "break\n"; break; /* finish early */}
 		}
 		if (verbose) fprintf (stderr,  "T:%f L:%d B:%d C:%d\n", T, pathlen, bestlen, pathchg);
-		if (pathchg == 0) break;   /* if no change then quit */
+		if (pathchg == 0) {cout << "break 2\n"; break;   /* if no change then quit */}
         }
+
+            cout << "Improved order: " << endl;
+          for (int i = 0; i < points; i++) {
+            cout << "b" << i << " "  << order[i] << endl;
+          }
+
+          cout << "Improved length: " << bestlen << endl;
+
+          //Modified to output to Outfile
+          outFile << "Length: " << bestlen;
+
+          for (int i = 0; i < points; i++) {
+            string identifier = names[order[i]];
+            outFile << endl << identifier;
+          }
+
         return bestlen;
 }
 ///-----------------------------
 
-//Reads file, counts input, returns arrays to main
-int lineCount(char *infileName)
-{
-	int lineCount = 0;
 
-  //Create/open in/outFile
-  inFile.open(infileName);
-
-  string outfileName = infileName;
-  outfileName += ".tour";
-  outFile.open(outfileName);
-
-	//Count lines in file
-	for (string line; getline(inFile, line); ++lineCount);
-	cout << "Lines in file: " << lineCount << endl;
-	inFile.clear();
-	inFile.seekg(0, ios::beg);
-	cout << "Lines: " << lineCount << endl;
-	return lineCount;
-}
-
-//Populate Names, Xs, and Ys of arrays with inFile data
-int populateArrays(string names[], int xs[], int ys[], int lines)
-{
-
-	string str;
-	int i = 0;
-	cout << sizeof(xs);
-	while (i < lines)
-	{
-		cout << "Populating index " << i << endl;
-
-		//Input city name
-		inFile >> str;
-		cout << "Name = " << str << endl;
-		names[i] = str;
-
-		//Input city's x coordinate
-		inFile >> str;
-		cout << "X = " << str << endl;
-		xs[i] = stoi(str);
-
-		//Input city's y coordinate
-		inFile >> str;
-		cout << "Y = " << str << endl;
-		ys[i] = stoi(str);
-
-		i++;
-	}
-}
-
-// Return true if test in arr
-bool isIn(int arr[], int test, int length){
-  for (int i = 0; i < length; i++) {
-    if (arr[i] == test) return true;
-  }
-  return false;
-}
-
-// Returns distance between two points to the nearest integer
-int distance(float x1, float y1, float x2, float y2) {
-  return (int) (sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2)) + .5);
-}
-
-unsigned int long tourLength(int xs[], int ys[], int order[], int points) {
-  unsigned int long length = 0;
-
-  for (int i = 0; i < points - 1; i++) {
-    length += distance(xs[order[i]], ys[order[i]], xs[order[i+1]], ys[order[i+1]]);
-  }
-  length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
-
-  return length;
-}
 
 // Greedy algorithm for initial tour, returns the tour length
 unsigned int long greedyTour(int xs[], int ys[], int order[], int points)
@@ -729,9 +777,9 @@ int main(int argc, char *argv[])
   	for (int i = 0; i < lines; i++) order[i] = -1;
 	populateArrays(names, xs, ys, lines);
 
-	greedyTour(xs, ys, order, lines);
+	//greedyTour(xs, ys, order, lines);
 	//opt2Tour(xs, ys, order, lines);
-	int totalDist = annealing(xs, ys, order, lines);
+	int totalDist = annealing(xs, ys, order, lines, names);
 	//totalDist = opt3Tour(xs, ys, order, lines, names);
 	//totalDist = opt3Tour(xs, ys, order, lines, names);
 	return 0;
