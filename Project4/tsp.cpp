@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
 
 	int totalDist = greedyTour(xs, ys, order, lines);
 
-    if(lines < 300)
+    if(lines < 200)
     {
         //cout << "If";
         //opt2Tour(xs, ys, order, lines);
@@ -295,7 +295,7 @@ int main(int argc, char *argv[])
         totalDist = opt3Tour(xs, ys, order, lines, names);
     }
 
-	if(lines < 500)
+	if(lines < 250)
     {
         //cout << "If";
         //opt2Tour(xs, ys, order, lines);
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
         totalDist = opt3Tour(xs, ys, order, lines, names);
     }
 
-    if(lines < 1000)
+    if(lines < 500)
     {
         //cout << "If";
         //opt2Tour(xs, ys, order, lines);
