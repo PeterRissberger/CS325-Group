@@ -118,6 +118,9 @@ int greedyTour(int xs[], int ys[], int order[], int points)
   // Add the connection from the last point to the first
   length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
   cout << "Greedy tour length: " << length << endl;
+
+
+
   return length;
 }
 
@@ -296,7 +299,7 @@ int main(int argc, char *argv[])
 	int totalDist = greedyTour(xs, ys, order, lines);
 
 	if (lines <= 250) {
-        opt3Tour(xs, ys, order, lines, names);
+        	opt3Tour(xs, ys, order, lines, names);
 		opt3Tour(xs, ys, order, lines, names);
 		totalDist = opt3Tour(xs, ys, order, lines, names);
 	} else if (lines <= 2000) {
