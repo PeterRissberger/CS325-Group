@@ -11,12 +11,6 @@
 #include <algorithm>
 #include <stdlib.h>
 
-#define T_INIT                        100
-#define FINAL_T                       0.1
-#define COOLING                       0.9 /* to lower down T (< 1) */
-#define TRIES_PER_T                   500*n
-#define IMPROVED_PATH_PER_T           60*n
-
 /*
  * Portable Uniform Integer Random Number in [0-2^31] range
  * Performs better than ansi-C rand()
@@ -463,7 +457,7 @@ int getReverseCost (Path p, int points, int order[])
 	a = order[MOD(p[0]-1,points)]; b = order[p[0]];
 	c = order[p[1]];   d = order[MOD(p[1]+1,points)];
 
-    cout << "getReverseCost Values\n";
+    //cout << "getReverseCost Values\n";
 
 	//return (D(d,b, points) + D(c,a, points) - D(a,b, points) - D(c,d, points));
 	return (distance(a, c, b, d));
@@ -494,24 +488,27 @@ int annealing(int xs[], int ys[], int order[], int points, string names[])
 	int    pathlen, bestlen;
 	double energyChange, T;
 
-	int Tries_per_T = 500*points;
+	float T_INIT = 100;
+    float FINAL_T = 0.1;
+    float COOLING = 0.9; /* to lower down T (< 1) */
+    int Tries_per_T = 700*points;
 	int Improved_path_per_T = 60*points;
 
-    cout << "StartVars\n";
+    //cout << "StartVars\n";
 	pathlen = tourLength(xs, ys, order, points);//pathLength (order, points);
-	cout << "pathlen\n";
+	//cout << "pathlen\n";
 	bestlen = pathlen;
-	cout << "Vars\n";
+	//cout << "Vars\n";
 
 	for (T = T_INIT; T > FINAL_T; T *= COOLING)  /* annealing schedule */
         {
-            cout << "For 1\n";
+            //cout << "For 1\n";
 		pathchg = 0;
 		for (j = 0; j < Tries_per_T; j++)
 		{
-		    cout << "For 2\n";
+		    //cout << "For 2\n";
 			do {
-                    cout << "While 1\n";
+                    //cout << "While 1\n";
 				p[0] = unifRand (points);
 				p[1] = unifRand (points);
 				if (p[0] == p[1]) p[1] = MOD(p[0]+1,points); /* non-empty path */
@@ -519,19 +516,19 @@ int annealing(int xs[], int ys[], int order[], int points, string names[])
 				numNotOnPath = points - numOnPath;
 			} while (numOnPath < 2 || numNotOnPath < 2); /* non-empty path */
 
-            cout << "Out of while\n";
+            //cout << "Out of while\n";
 
 			if (RANDOM() % 2) /*  threeWay */
 			{
-                    cout << "in if rand\n";
+                    //cout << "in if rand\n";
 				do {
-                        cout << "While 2\n";
+                        //cout << "While 2\n";
 					p[2] = MOD(unifRand (numNotOnPath)+p[1]+1,points);
 				} while (p[0] == MOD(p[2]+1,points)); /* avoids a non-change */
 
-                    cout << "Out of while 2\n";
+                    //cout << "Out of while 2\n";
 				energyChange = getThreeWayCost (p, points);
-                    cout << "Past energyChange\n";
+                    //cout << "Past energyChange\n";
 				if (energyChange < 0 || RREAL < exp(-energyChange/T) )
 				{
 					pathchg++;
@@ -541,21 +538,29 @@ int annealing(int xs[], int ys[], int order[], int points, string names[])
 			}
 			else            /* path Reverse */
 			{
-			    cout << "'if rand' else\n";
+			    //cout << "'if rand' else\n";
 				energyChange = getReverseCost (p, points, order);
-				cout << "past energyChange\n";
+				//cout << "past energyChange\n";
 				if (energyChange < 0 || RREAL < exp(-energyChange/T))
 				{
-				    cout << "in if 'energyChange'\n";
+				    //cout << "in if 'energyChange'\n";
 					pathchg++;
 					pathlen += energyChange;
-					cout << "past if values\n";
+					//cout << "past if values\n";
 					doReverse(p, points, order);
 				}
-				cout << "past if 'energyChange'\n";
+				//cout << "past if 'energyChange'\n";
 			}
-			if (pathlen < bestlen) {cout << "if 'pathlen <'n"; bestlen = pathlen;}
-			if (pathchg > Improved_path_per_T) {cout << "break\n"; break; /* finish early */}
+			if (pathlen < bestlen)
+                {
+                    //cout << "if 'pathlen <'n";
+                    bestlen = pathlen;
+                }
+			if (pathchg > Improved_path_per_T)
+                {
+                    cout << "break\n";
+                    break; /* finish early */
+                }
 		}
 		if (verbose) fprintf (stderr,  "T:%f L:%d B:%d C:%d\n", T, pathlen, bestlen, pathchg);
 		if (pathchg == 0) {cout << "break 2\n"; break;   /* if no change then quit */}
@@ -777,7 +782,7 @@ int main(int argc, char *argv[])
   	for (int i = 0; i < lines; i++) order[i] = -1;
 	populateArrays(names, xs, ys, lines);
 
-	//greedyTour(xs, ys, order, lines);
+	greedyTour(xs, ys, order, lines);
 	//opt2Tour(xs, ys, order, lines);
 	int totalDist = annealing(xs, ys, order, lines, names);
 	//totalDist = opt3Tour(xs, ys, order, lines, names);
