@@ -1,7 +1,10 @@
 //CS 325 Project 4: TSP
 //Alex Way, Kristin Swanson, Peter Rissberger
 //Build with: g++ -std=c++0x -g -o tsp tsp.cpp
-//Run with: tsp inFile.txt
+//Run with: tsp inFile.txt 
+//Optionally, add 2 or 3 as a final argument.  This will run the 2-opt or 3-opt
+//(respectively) until no more improvement can be found.  Leave the 3rd 
+//argument off for a faster (but perhaps less optimal) solution.
 
 #include <iostream> 
 #include <fstream>
@@ -271,6 +274,10 @@ int main(int argc, char *argv[])
 	//Count lines in input file 
 	int lines = lineCount(argv[1]); 
 
+	// To find better solutions but taking more time
+	int fast = 1;
+	if (argc > 2) fast = atoi(argv[2]);
+	
 	//Populate arrays with cities and coordinates
 	string names[lines];
 	int xs[lines];
@@ -280,8 +287,18 @@ int main(int argc, char *argv[])
 	populateArrays(names, xs, ys, lines);
 	
 	int totalDist = greedyTour(xs, ys, order, lines);
-	
- 	if (lines <= 250) {
+	int tempDist;
+ 	if (fast == 2) {
+		do {
+			tempDist = totalDist;
+			totalDist = opt2Tour(xs, ys, order, lines, names);
+		} while (tempDist != totalDist);
+	} else if (fast == 3) {
+		do {
+			tempDist = totalDist;
+			totalDist = opt3Tour(xs, ys, order, lines, names);
+		} while (tempDist != totalDist);
+	} else if (lines <= 250) {
 		opt3Tour(xs, ys, order, lines, names);
 		opt3Tour(xs, ys, order, lines, names);
 		totalDist = opt3Tour(xs, ys, order, lines, names);
