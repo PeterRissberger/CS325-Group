@@ -1,71 +1,71 @@
 //CS 325 Project 4: TSP
 //Alex Way, Kristin Swanson, Peter Rissberger
 //Build with: g++ -std=c++0x -g -o tsp tsp.cpp
-//Run with: tsp inFile.txt 
+//Run with: tsp inFile.txt
 //Optionally, add 2 or 3 as a final argument.  This will run the 2-opt or 3-opt
-//(respectively) until no more improvement can be found.  Leave the 3rd 
+//(respectively) until no more improvement can be found.  Leave the 3rd
 //argument off for a faster (but perhaps less optimal) solution.
 
-#include <iostream> 
+#include <iostream>
 #include <fstream>
-#include <string> 
+#include <string>
 #include <cmath>
 #include <algorithm>
 
-using namespace std; 
+using namespace std;
 
 //Global vars
-ifstream inFile; 
-ofstream outFile; 
+ifstream inFile;
+ofstream outFile;
 
 //Reads file, counts input, returns arrays to main
 int lineCount(char *infileName)
 {
-	int lineCount = 0; 
-	
+	int lineCount = 0;
+
   //Create/open in/outFile
-  inFile.open(infileName); 
-  
+  inFile.open(infileName);
+
   string outfileName = infileName;
   outfileName += ".tour";
   outFile.open(outfileName);
-  
-	//Count lines in file 
+
+	//Count lines in file
 	for (string line; getline(inFile, line); ++lineCount);
-	cout << "Lines in file: " << lineCount << endl; 
+	cout << "Lines in file: " << lineCount << endl;
 	inFile.clear();
 	inFile.seekg(0, ios::beg);
-//	cout << "Lines: " << lineCount << endl; 
-	return lineCount; 
+//	cout << "Lines: " << lineCount << endl;
+	return lineCount;
 }
 
 //Populate Names, Xs, and Ys of arrays with inFile data
 int populateArrays(string names[], int xs[], int ys[], int lines)
 {
 
-	string str; 
-	int i = 0; 
-	//cout << sizeof(xs); 
+	string str;
+	int i = 0;
+	//cout << sizeof(xs);
 	while (i < lines)
 	{
-	//	cout << "Populating index " << i << endl; 
+	//	cout << "Populating index " << i << endl;
 
 		//Input city name
-		inFile >> str; 
-	//	cout << "Name = " << str << endl; 
-		names[i] = str; 
+		inFile >> str;
+	//	cout << "Name = " << str << endl;
+		names[i] = str;
 
 		//Input city's x coordinate
-		inFile >> str; 
-	//	cout << "X = " << str << endl; 
-		xs[i] = stoi(str); 
-		
+		inFile >> str;
+	//	cout << "X = " << str << endl;
+		xs[i] = stoi(str);
+
 		//Input city's y coordinate
-		inFile >> str; 
-	//	cout << "Y = " << str << endl; 
-		ys[i] = stoi(str); 
-				
-		i++; 
+		inFile >> str;
+	//	cout << "Y = " << str << endl;
+		ys[i] = stoi(str);
+
+		i++;
 	}
 }
 
@@ -89,7 +89,7 @@ int tourLength(int xs[], int ys[], int order[], int points) {
     length += distance(xs[order[i]], ys[order[i]], xs[order[i+1]], ys[order[i+1]]);
   }
   length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
- 
+
   return length;
 }
 
@@ -119,7 +119,7 @@ int greedyTour(int xs[], int ys[], int order[], int points)
       length += bestDist;
   }
   // Add the connection from the last point to the first
-  length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]); 
+  length += distance(xs[order[points - 1]], ys[order[points - 1]], xs[order[0]], ys[order[0]]);
   cout << "Greedy tour length: " << length << endl;
   return length;
 }
@@ -132,7 +132,7 @@ int opt2Tour(int xs[], int ys[], int order[], int points, string names[])
 
 /*  cout << "Greedy order: " << endl;
   for (int i = 0; i < points; i++) {
-    cout << order[i] << endl; 
+    cout << order[i] << endl;
   }*/
 
   // For each point, consider switching it with each other point, storing the
@@ -148,7 +148,7 @@ int opt2Tour(int xs[], int ys[], int order[], int points, string names[])
       nextDist = tourLength(xs, ys, order, points);
       swap(order[i], order[j]);
 
-      // if the new tour is shorter, store the point index j and the distance 
+      // if the new tour is shorter, store the point index j and the distance
       // of its tour as best option so far
       if (nextDist < bestDist) {
   	bestDist = nextDist;
@@ -160,13 +160,13 @@ int opt2Tour(int xs[], int ys[], int order[], int points, string names[])
       swap(order[i], order[bestPointIdx]);
       isChange = true;
     }
-  } 
+  }
   length = tourLength(xs, ys, order, points);
   cout << "Improved length: " << length << endl;
- 
+
 /*  cout << "Improved order: " << endl;
   for (int i = 0; i < points; i++) {
-    cout << order[i] << endl; 
+    cout << order[i] << endl;
   }*/
 
   return length;
@@ -180,7 +180,7 @@ int opt3Tour(int xs[], int ys[], int order[], int points, string names[])
 
 /*  cout << "Greedy order: " << endl;
   for (int i = 0; i < points; i++) {
-    cout << order[i] << endl; 
+    cout << order[i] << endl;
   }
 */
   // For each point, consider switching it with each other point, storing the
@@ -197,7 +197,7 @@ int opt3Tour(int xs[], int ys[], int order[], int points, string names[])
       nextDist = tourLength(xs, ys, order, points);
       swap(order[i], order[j]);
 
-      // if the new tour is shorter, store the point index j and the distance 
+      // if the new tour is shorter, store the point index j and the distance
       // of its tour as best option so far
       if (nextDist < bestDist) {
   	bestDist = nextDist;
@@ -239,22 +239,22 @@ int opt3Tour(int xs[], int ys[], int order[], int points, string names[])
 	swap(order[i], order[bestPointIdx]);
 	swap(order[bestPointIdx], order[bestPointIdx2]);
      // cout << "Swapped 3 edges" << endl;
-      } else { 
+      } else {
         swap(order[i], order[bestPointIdx]);
 //	cout << "Swapped 2 edges" << endl;
       }
       isChange = true;
     }
  //   cout << "Current tour length: " << tourLength(xs, ys, order, points) << endl;
-   
-  } 
+
+  }
 
   length = tourLength(xs, ys, order, points);
   cout << "Improved length: " << length << endl;
 
 /*  cout << "Improved order: " << endl;
   for (int i = 0; i < points; i++) {
-    cout << order[i] << endl; 
+    cout << order[i] << endl;
   }*/
 
   return length;
@@ -265,19 +265,19 @@ void outputTour(int length, int order[], int points, string names[]) {
   outFile << "Length: " << length;
   for (int i = 0; i < points; i++) {
     string identifier = names[order[i]];
-    outFile << endl << identifier; 
+    outFile << endl << identifier;
   }
 }
 
 int main(int argc, char *argv[])
 {
-	//Count lines in input file 
-	int lines = lineCount(argv[1]); 
+	//Count lines in input file
+	int lines = lineCount(argv[1]);
 
 	// To find better solutions but taking more time
 	int fast = 1;
 	if (argc > 2) fast = atoi(argv[2]);
-	
+
 	//Populate arrays with cities and coordinates
 	string names[lines];
 	int xs[lines];
@@ -285,9 +285,12 @@ int main(int argc, char *argv[])
 	int order[lines];
   	for (int i = 0; i < lines; i++) order[i] = -1;
 	populateArrays(names, xs, ys, lines);
-	
+
 	int totalDist = greedyTour(xs, ys, order, lines);
 	int tempDist;
+
+
+
  	if (fast == 2) {
 		do {
 			tempDist = totalDist;
@@ -295,6 +298,7 @@ int main(int argc, char *argv[])
 		} while (tempDist != totalDist);
 	} else if (fast == 3) {
 		do {
+                cout << "fast = " << fast;
 			tempDist = totalDist;
 			totalDist = opt3Tour(xs, ys, order, lines, names);
 		} while (tempDist != totalDist);
@@ -303,6 +307,7 @@ int main(int argc, char *argv[])
 		opt3Tour(xs, ys, order, lines, names);
 		totalDist = opt3Tour(xs, ys, order, lines, names);
 	} else if (lines <= 1000) {
+ 		opt2Tour(xs, ys, order, lines, names);
  		opt2Tour(xs, ys, order, lines, names);
 		opt2Tour(xs, ys, order, lines, names);
 		totalDist = opt2Tour(xs, ys, order, lines, names);
