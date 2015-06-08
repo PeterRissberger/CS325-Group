@@ -166,13 +166,6 @@ int opt2Tour(int xs[], int ys[], int order[], int points, string names[])
     cout << order[i] << endl; 
   }*/
 
-  //Modified to output to Outfile
-  outFile << "Length: " << length;
-  for (int i = 0; i < points; i++) {
-    string identifier = names[order[i]];
-    outFile << endl << identifier; 
-  }
-
   return length;
 }
 
@@ -261,14 +254,7 @@ int opt3Tour(int xs[], int ys[], int order[], int points, string names[])
     cout << order[i] << endl; 
   }*/
 
-  //Modified to output to Outfile
-  outFile << "Length: " << length;
-  for (int i = 0; i < points; i++) {
-    string identifier = names[order[i]];
-    outFile << endl << identifier; 
-  }
-
- return length;
+  return length;
 }
 
 // Outputs tour length and order visited to file [input_file].tour
@@ -295,11 +281,17 @@ int main(int argc, char *argv[])
 	
 	int totalDist = greedyTour(xs, ys, order, lines);
 	
-	if (lines <= 250) {
+ 	if (lines <= 250) {
+		opt3Tour(xs, ys, order, lines, names);
+		opt3Tour(xs, ys, order, lines, names);
 		totalDist = opt3Tour(xs, ys, order, lines, names);
+	} else if (lines <= 1000) {
+ 		opt2Tour(xs, ys, order, lines, names);
+		opt2Tour(xs, ys, order, lines, names);
+		totalDist = opt2Tour(xs, ys, order, lines, names);
 	} else if (lines <= 2000) {
 		totalDist = opt2Tour(xs, ys, order, lines, names);
 	}
-	else outputTour(totalDist, order, lines, names);
+	outputTour(totalDist, order, lines, names);
 	return 0;
 }
